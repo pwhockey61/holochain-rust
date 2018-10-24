@@ -22,12 +22,12 @@ fn run_nodejs_echo_server() -> std::process::Child {
     // make sure the npm dependencies are installed
     assert!(
         std::process::Command::new("npm")
-            .args(&["install", "--production"])
+            .args(&["ci", "--production"])
             .current_dir("./tests/node-p2p-ipc")
             .status()
-            .expect("failed running npm install")
+            .expect("failed running npm ci")
             .success(),
-        "failed running npm install"
+        "failed running npm ci"
     );
 
     // spawn the actual echo-server process
