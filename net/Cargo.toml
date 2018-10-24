@@ -6,4 +6,5 @@ authors = ["holochain dev core <devcore@holo.host>"]
 [dependencies]
 base64 = "0.9.3"
 failure = "0.1.1"
+holochain_net_ipc = { path = "../net_ipc" }
 serde_json = "1.0"

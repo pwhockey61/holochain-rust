@@ -4,9 +4,19 @@ version = "0.1.0"
 authors = ["neonphog <neonphog@gmail.com>"]
 
 [dependencies]
+failure = "0.1.1"
 holochain_core = { path = "../core" }
 holochain_dna = { path = "../dna" }
 holochain_agent = { path = "../agent" }
 holochain_core_api = { path = "../core_api" }
 holochain_cas_implementations = {path="../cas_implementations"}
+holochain_net = { path = "../net" }
 tempfile = "3"
+
+[[bin]]
+name = "holochain_test_bin"
+path = "src/main.rs"
+
+[[bin]]
+name = "holochain_test_ipc_network_suite"
+path = "src/ipc_network_suite.rs"

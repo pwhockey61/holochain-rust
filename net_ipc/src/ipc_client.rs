@@ -8,7 +8,7 @@ use serde;
 use errors::*;
 use message::*;
 use msg_types::*;
-use socket::{IpcSocket, ZmqIpcSocket};
+use socket::{IpcSocket, ZmqIpcSocket, MockIpcSocket};
 use util::*;
 
 /// A closure callback type def for getting acknowledgment when performing a `call`.
@@ -192,27 +192,43 @@ impl<S: IpcSocket> IpcClient<S> {
 /// The ZeroMQ implementation of IpcClient.
 pub type ZmqIpcClient = IpcClient<ZmqIpcSocket>;
 
+#[derive(Serialize, Debug, Clone, PartialEq)]
+pub struct MockMsgPongSend(pub f64, pub f64);
+
+impl MockMsgPongSend {
+    pub fn new() -> Self {
+        MockMsgPongSend(get_millis() - 4.0, get_millis() - 2.0)
+    }
+}
+
+impl IpcClient<MockIpcSocket> {
+    pub fn priv_test_inject(&mut self, data: Vec<Vec<u8>>) {
+        self.socket.inject_response(data);
+    }
+
+    pub fn priv_test_inject_pong(&mut self) {
+        let pong = MockMsgPongSend(get_millis() - 4.0, get_millis() - 2.0);
+        let mut data = rmp_serde::to_vec(&pong).unwrap();
+        data.insert(0, MSG_PONG);
+
+        self.priv_test_inject(vec![vec![], vec![], data]);
+    }
+
+    pub fn priv_test_sent_count(&mut self) -> usize {
+        self.socket.sent_count()
+    }
+
+    pub fn priv_test_next_sent(&mut self) -> Vec<Vec<u8>> {
+        self.socket.next_sent()
+    }
+}
+
+/// A mock implentation of IpcClient for unit testing.
+pub type MockIpcClient = IpcClient<MockIpcSocket>;
+
 #[cfg(test)]
 mod tests {
     use super::*;
-    use socket::MockIpcSocket;
-
-    #[derive(Serialize, Debug, Clone, PartialEq)]
-    pub struct MsgPongSend(pub f64, pub f64);
-
-    impl IpcClient<MockIpcSocket> {
-        fn priv_test_inject(&mut self, data: Vec<Vec<u8>>) {
-            self.socket.inject_response(data);
-        }
-
-        fn priv_test_sent_count(&mut self) -> usize {
-            self.socket.sent_count()
-        }
-
-        fn priv_test_next_sent(&mut self) -> Vec<Vec<u8>> {
-            self.socket.next_sent()
-        }
-    }
 
     #[test]
     fn it_can_construct_and_destroy_sockets() {
@@ -224,11 +240,7 @@ mod tests {
     fn it_can_connect() {
         let mut ipc: IpcClient<MockIpcSocket> = IpcClient::new().unwrap();
 
-        let pong = MsgPongSend(get_millis() - 4.0, get_millis() - 2.0);
-        let mut data = rmp_serde::to_vec(&pong).unwrap();
-        data.insert(0, MSG_PONG);
-
-        ipc.priv_test_inject(vec![vec![], vec![], data]);
+        ipc.priv_test_inject_pong();
 
         ipc.connect("test-garbage").unwrap();
         ipc.close().unwrap();

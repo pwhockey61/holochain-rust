@@ -34,6 +34,7 @@ pub const BIN_TYPE_APP_SIGNATURE: u8 = 0x21;
 pub const BIN_TYPE_APP_ENCRYPTION: u8 = 0x22;
 
 /// enum defining the state of this p2p/network connection
+#[derive(Debug)]
 pub enum P2pNetworkState {
     /// we are still setting up the connection, please wait
     Pending,

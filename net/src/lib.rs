@@ -5,8 +5,11 @@
 extern crate base64;
 #[macro_use]
 extern crate failure;
+extern crate holochain_net_ipc;
 #[macro_use]
 extern crate serde_json;
 
 pub mod error;
 pub mod p2p_network;
+
+pub mod ipc;

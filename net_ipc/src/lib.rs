@@ -24,7 +24,7 @@ pub mod msg_types;
 pub mod errors;
 mod context;
 pub mod message;
-mod socket;
+pub mod socket;
 mod util;
 
 pub mod ipc_client;
