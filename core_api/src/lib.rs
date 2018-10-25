@@ -33,7 +33,7 @@
 //! let context = Context::new(
 //!     agent,
 //!     Arc::new(Mutex::new(SimpleLogger {})),
-//!     Arc::new(Mutex::new(SimplePersister::new())),
+//!     Arc::new(Mutex::new(SimplePersister::new(String::from("Agent Name")))),
 //!     FilesystemStorage::new(tempdir().unwrap().path().to_str().unwrap()).unwrap(),
 //!     EavFileStorage::new(tempdir().unwrap().path().to_str().unwrap().to_string()).unwrap(),
 //!  ).unwrap();
@@ -75,11 +75,12 @@ use holochain_core::{
     context::Context,
     instance::Instance,
     nucleus::{actions::initialize::initialize_application, call_and_wait_for_result, ZomeFnCall},
+    persister::{Persister, SimplePersister},
     state::State,
 };
 use holochain_core_types::error::HolochainError;
 use holochain_dna::Dna;
-use std::sync::Arc;
+use std::sync::{Arc, RwLock};
 
 /// contains a Holochain application instance
 pub struct Holochain {
@@ -112,8 +113,20 @@ impl Holochain {
         }
     }
 
-    pub fn load(_path: String, _context: Arc<Context>) -> Result<Self, HolochainError> {
-        Err(HolochainError::NotImplemented)
+    pub fn load(path: String, context: Arc<Context>) -> Result<Self, HolochainError> {
+        let mut new_context = (*context).clone();
+        let persister = SimplePersister::new(format!("{}/state", path));
+        let loaded_state = persister
+            .load(context.clone())
+            .unwrap_or(Some(State::new(context.clone())))
+            .unwrap();
+        let mut instance = Instance::from_state(loaded_state);
+        instance.start_action_loop(context.clone());
+        Ok(Holochain {
+            instance,
+            context: context.clone(),
+            active: false,
+        })
     }
 
     /// activate the Holochain instance
@@ -194,7 +207,7 @@ mod tests {
                 Context::new(
                     agent,
                     logger.clone(),
-                    Arc::new(Mutex::new(SimplePersister::new())),
+                    Arc::new(Mutex::new(SimplePersister::new("foo".to_string()))),
                     FilesystemStorage::new(tempdir().unwrap().path().to_str().unwrap()).unwrap(),
                     EavFileStorage::new(tempdir().unwrap().path().to_str().unwrap().to_string())
                         .unwrap(),

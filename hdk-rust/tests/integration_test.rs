@@ -6,7 +6,7 @@ extern crate test_utils;
 
 use holochain_core_api::*;
 use holochain_dna::zome::{
-    capabilities::{Capability, FnDeclaration},
+    capabilities::{Capability, FnDeclaration, Membrane},
     entry_types::EntryTypeDef,
 };
 use std::sync::{Arc, Mutex};
@@ -14,6 +14,7 @@ use test_utils::*;
 
 pub fn create_test_cap_with_fn_names(fn_names: Vec<&str>) -> Capability {
     let mut capability = Capability::new();
+    capability.cap_type.membrane = Membrane::Public;
 
     for fn_name in fn_names {
         let mut fn_decl = FnDeclaration::new();
@@ -31,11 +32,17 @@ fn start_holochain_instance() -> (Holochain, Arc<Mutex<TestLogger>>) {
         "check_global",
         "check_commit_entry",
         "check_commit_entry_macro",
+        "check_get_entry_result",
         "check_get_entry",
         "send_tweet",
         "commit_validation_package_tester",
         "link_two_entries",
         "links_roundtrip",
+        "check_query",
+        "check_hash_app_entry",
+        "check_hash_sys_entry",
+        "check_call",
+        "check_call_with_args",
     ]);
     let mut dna = create_test_dna_with_cap("test_zome", "test_cap", &capabability, &wasm);
 
@@ -134,6 +141,16 @@ fn can_get_entry() {
     let result = hc.call(
         "test_zome",
         "test_cap",
+        "check_get_entry_result",
+        r#"{"entry_hash":"QmZi7c1G2qAN6Y5wxHDB9fLhSaSVBJe28ZVkiPraLEcvou"}"#,
+    );
+    println!("\t can_get_entry_result result = {:?}", result);
+    assert!(result.is_ok(), "\t result = {:?}", result);
+    assert_eq!(result.unwrap(), "{\"stuff\":\"non fail\"}");
+
+    let result = hc.call(
+        "test_zome",
+        "test_cap",
         "check_get_entry",
         r#"{"entry_hash":"QmZi7c1G2qAN6Y5wxHDB9fLhSaSVBJe28ZVkiPraLEcvou"}"#,
     );
@@ -145,12 +162,23 @@ fn can_get_entry() {
     let result = hc.call(
         "test_zome",
         "test_cap",
+        "check_get_entry_result",
+        r#"{"entry_hash":"QmbC71ggSaEa1oVPTeNN7ZoB93DYhxowhKSF6Yia2Vjxxx"}"#,
+    );
+    println!("\t can_get_entry_result result = {:?}", result);
+    assert!(result.is_ok(), "\t result = {:?}", result);
+    assert_eq!(result.unwrap(), "{\"got back no entry\":true}");
+
+    // test the case with a bad hash
+    let result = hc.call(
+        "test_zome",
+        "test_cap",
         "check_get_entry",
         r#"{"entry_hash":"QmbC71ggSaEa1oVPTeNN7ZoB93DYhxowhKSF6Yia2Vjxxx"}"#,
     );
     println!("\t can_get_entry result = {:?}", result);
     assert!(result.is_ok(), "\t result = {:?}", result);
-    assert_eq!(result.unwrap(), "{\"got back no entry\":true}");
+    assert_eq!(result.unwrap(), "null");
 }
 
 #[test]
@@ -241,4 +269,71 @@ fn can_roundtrip_links() {
     let ordering1: bool = result_string == r#"{"links":["QmStYP5FYC61PfKKMYZpqBSMRJCAUeuSS8Vuz4EQL5uvK2","QmW6vfGv7fWMPQsgwd63HJhtoZmHTrf9MSNXCkG6LZxyog"]}"#;
     let ordering2: bool = result_string == r#"{"links":["QmW6vfGv7fWMPQsgwd63HJhtoZmHTrf9MSNXCkG6LZxyog","QmStYP5FYC61PfKKMYZpqBSMRJCAUeuSS8Vuz4EQL5uvK2"]}"#;
     assert!(ordering1 || ordering2);
+}
+
+#[test]
+fn can_check_query() {
+    let (mut hc, _) = start_holochain_instance();
+
+    let result = hc.call(
+        "test_zome",
+        "test_cap",
+        "check_query",
+        r#"{ "entry_type_name": "testEntryType", "limit": "0" }"#,
+    );
+    assert!(result.is_ok(), "result = {:?}", result);
+    assert_eq!(
+        result.unwrap(),
+        r#"["QmStYP5FYC61PfKKMYZpqBSMRJCAUeuSS8Vuz4EQL5uvK2"]"#,
+    );
+}
+
+#[test]
+fn can_check_hash_app_entry() {
+    let (mut hc, _) = start_holochain_instance();
+
+    let result = hc.call("test_zome", "test_cap", "check_hash_app_entry", r#"{}"#);
+    assert!(result.is_ok(), "result = {:?}", result);
+    assert_eq!(
+        result.unwrap(),
+        "\"QmYmZyvDda3ygMhNnEjx8p9Q1TonHG9xhpn9drCptRT966\"",
+    );
+}
+
+#[test]
+fn can_check_hash_sys_entry() {
+    let (mut hc, _) = start_holochain_instance();
+
+    let _result = hc.call("test_zome", "test_cap", "check_hash_sys_entry", r#"{}"#);
+    // TODO
+    //    assert!(result.is_ok(), "result = {:?}", result);
+    //    assert_eq!(
+    //        result.unwrap(),
+    //        r#"{"result":"QmYmZyvDda3ygMhNnEjx8p9Q1TonHG9xhpn9drCptRT966"}"#,
+    //    );
+}
+
+#[test]
+fn can_check_call() {
+    let (mut hc, _) = start_holochain_instance();
+
+    let result = hc.call("test_zome", "test_cap", "check_call", r#"{}"#);
+    assert!(result.is_ok(), "result = {:?}", result);
+    assert_eq!(
+        result.unwrap(),
+        "\"QmYmZyvDda3ygMhNnEjx8p9Q1TonHG9xhpn9drCptRT966\"",
+    );
+}
+
+#[test]
+fn can_check_call_with_args() {
+    let (mut hc, _) = start_holochain_instance();
+
+    let result = hc.call("test_zome", "test_cap", "check_call_with_args", r#"{}"#);
+    println!("\t result = {:?}", result);
+    assert!(result.is_ok(), "\t result = {:?}", result);
+    assert_eq!(
+        result.unwrap(),
+        r#"{"address":"QmZi7c1G2qAN6Y5wxHDB9fLhSaSVBJe28ZVkiPraLEcvou"}"#
+    );
 }
