@@ -7,8 +7,9 @@ members = [
   "core",
   "dna",
   "dna_c_binding",
-  "net",
-  "test_bin",
-  "net_ipc",
   "hdk-rust",
+  "net",
+  "net_actor_system",
+  "net_ipc",
+  "test_bin",
 ]

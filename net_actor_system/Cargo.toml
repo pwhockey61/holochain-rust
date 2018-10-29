@@ -1,0 +1,13 @@
+[package]
+name = "holochain_net_actor_system"
+version = "0.1.0"
+authors = ["neonphog <neonphog@gmail.com>"]
+edition = "2018"
+
+[dependencies]
+futures-preview = "0.2.2"
+holochain_core_types = { path = "../core_types" }
+lazy_static = "1.1.0"
+riker = "0.1.7"
+riker-default = "0.1.7"
+riker-patterns = "0.1.7"
