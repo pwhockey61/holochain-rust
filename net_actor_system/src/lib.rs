@@ -19,7 +19,7 @@ mod tests {
     use riker::actor::{
         Actor,
         ActorRef,
-        ActorRefFactory,
+        TmpActorRefFactory,
         BoxActor,
         BoxActorProd,
         Context,
@@ -62,7 +62,8 @@ mod tests {
 
     #[test]
     fn it_receives() {
-        let a = NET_ACTOR_SYS.actor_of(A::props(), "a").unwrap();
+        let a = NET_ACTOR_SYS.tmp_actor_of(A::props()).unwrap();
+        let _a2 = NET_ACTOR_SYS.tmp_actor_of(A::props()).unwrap();
 
         let res = ask(&(*NET_ACTOR_SYS), &a, NetProtocol::NamedJson(
                 "a".into(), "b".into()));
