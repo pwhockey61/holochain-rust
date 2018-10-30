@@ -1,18 +1,8 @@
-use crate::net_connection::{
-    JsonString,
-    NetConnection,
-    NetHandler,
-    NetResult,
-    NetWorkerFactory,
-};
+use crate::net_connection::{JsonString, NetConnection, NetHandler, NetResult, NetWorkerFactory};
 
 use std::sync::{
-    Arc,
-    atomic::{
-        AtomicBool,
-        Ordering
-    },
-    mpsc,
+    atomic::{AtomicBool, Ordering},
+    mpsc, Arc,
 };
 
 pub struct NetConnectionThread {
@@ -39,10 +29,7 @@ impl NetConnectionThread {
         }
     }
 
-    pub fn new(
-        handler: NetHandler,
-        worker_factory: Box<NetWorkerFactory>
-    ) -> NetResult<Self> {
+    pub fn new(handler: NetHandler, worker_factory: Box<NetWorkerFactory>) -> NetResult<Self> {
         let keep_running = Arc::new(AtomicBool::new(true));
         let keep_running2 = keep_running.clone();
 
@@ -65,9 +52,9 @@ impl NetConnectionThread {
                             did_something = true;
                             match worker.receive(data) {
                                 Ok(_) => (),
-                                Err(e) => panic!(e)
+                                Err(e) => panic!(e),
                             };
-                        },
+                        }
                         Err(_) => (),
                     };
 
@@ -76,7 +63,7 @@ impl NetConnectionThread {
                             if b {
                                 did_something = true;
                             }
-                        },
+                        }
                         Err(e) => panic!(e),
                     };
 
@@ -91,7 +78,7 @@ impl NetConnectionThread {
 
                     std::thread::sleep(std::time::Duration::from_micros(us));
                 }
-            })
+            }),
         })
     }
 }
@@ -100,22 +87,16 @@ impl NetConnectionThread {
 mod tests {
     use super::*;
 
-    use crate::net_connection::{
-        NetWorker,
-    };
+    use crate::net_connection::NetWorker;
 
     struct DefWorker;
 
-    impl NetWorker for DefWorker {
-    }
+    impl NetWorker for DefWorker {}
 
     struct DefWorkerFactory;
 
     impl NetWorkerFactory for DefWorkerFactory {
-        fn new (
-            &self,
-            _handler: NetHandler,
-        ) -> NetResult<Box<NetWorker>> {
+        fn new(&self, _handler: NetHandler) -> NetResult<Box<NetWorker>> {
             Ok(Box::new(DefWorker))
         }
     }
@@ -123,9 +104,8 @@ mod tests {
     #[test]
     fn it_can_defaults() {
         let factory = DefWorkerFactory;
-        let mut con = NetConnectionThread::new(Box::new(move |_r| {
-            Ok(())
-        }), Box::new(factory)).unwrap();
+        let mut con =
+            NetConnectionThread::new(Box::new(move |_r| Ok(())), Box::new(factory)).unwrap();
 
         con.send("test".into()).unwrap();
         con.destroy().unwrap();
@@ -149,13 +129,8 @@ mod tests {
     struct WorkerFactory;
 
     impl NetWorkerFactory for WorkerFactory {
-        fn new(
-            &self,
-            handler: NetHandler,
-        ) -> NetResult<Box<NetWorker>> {
-            Ok(Box::new(Worker {
-                handler,
-            }))
+        fn new(&self, handler: NetHandler) -> NetResult<Box<NetWorker>> {
+            Ok(Box::new(Worker { handler }))
         }
     }
 
@@ -164,10 +139,13 @@ mod tests {
         let (sender, receiver) = std::sync::mpsc::channel();
 
         let factory = WorkerFactory;
-        let mut con = NetConnectionThread::new(Box::new(move |r| {
-            sender.send(r?)?;
-            Ok(())
-        }), Box::new(factory)).unwrap();
+        let mut con = NetConnectionThread::new(
+            Box::new(move |r| {
+                sender.send(r?)?;
+                Ok(())
+            }),
+            Box::new(factory),
+        ).unwrap();
 
         con.send("test".into()).unwrap();
 
@@ -183,10 +161,13 @@ mod tests {
         let (sender, receiver) = std::sync::mpsc::channel();
 
         let factory = WorkerFactory;
-        let con = NetConnectionThread::new(Box::new(move |r| {
-            sender.send(r?)?;
-            Ok(())
-        }), Box::new(factory)).unwrap();
+        let con = NetConnectionThread::new(
+            Box::new(move |r| {
+                sender.send(r?)?;
+                Ok(())
+            }),
+            Box::new(factory),
+        ).unwrap();
 
         let res = receiver.recv().unwrap();
 
