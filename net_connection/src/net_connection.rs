@@ -59,6 +59,8 @@ impl NetConnectionRelay {
 mod tests {
     use super::*;
 
+    use std::sync::mpsc;
+
     struct DefWorker;
 
     impl NetWorker for DefWorker {}
@@ -107,7 +109,7 @@ mod tests {
 
     #[test]
     fn it_invokes_connection_relay() {
-        let (sender, receiver) = std::sync::mpsc::channel();
+        let (sender, receiver) = mpsc::channel();
 
         let factory = WorkerFactory;
         let mut con = NetConnectionRelay::new(
@@ -129,7 +131,7 @@ mod tests {
 
     #[test]
     fn it_can_tick() {
-        let (sender, receiver) = std::sync::mpsc::channel();
+        let (sender, receiver) = mpsc::channel();
 
         let factory = WorkerFactory;
         let mut con = NetConnectionRelay::new(

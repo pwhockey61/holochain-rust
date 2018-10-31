@@ -1,4 +1,9 @@
-use crate::net_connection::{JsonString, NetConnection, NetHandler, NetResult, NetWorkerFactory};
+use super::net_connection::{JsonString, NetConnection, NetHandler, NetResult, NetWorkerFactory};
+
+use std::{
+    thread,
+    time,
+};
 
 use std::sync::{
     atomic::{AtomicBool, Ordering},
@@ -8,7 +13,7 @@ use std::sync::{
 pub struct NetConnectionThread {
     keep_running: Arc<AtomicBool>,
     send_channel: mpsc::Sender<JsonString>,
-    thread: std::thread::JoinHandle<()>,
+    thread: thread::JoinHandle<()>,
 }
 
 impl NetConnection for NetConnectionThread {
@@ -37,7 +42,7 @@ impl NetConnectionThread {
         Ok(NetConnectionThread {
             keep_running,
             send_channel: sender,
-            thread: std::thread::spawn(move || {
+            thread: thread::spawn(move || {
                 let mut us = 100_u64;
                 let mut worker = match worker_factory.new(handler) {
                     Ok(w) => w,
@@ -76,7 +81,7 @@ impl NetConnectionThread {
                         }
                     }
 
-                    std::thread::sleep(std::time::Duration::from_micros(us));
+                    thread::sleep(time::Duration::from_micros(us));
                 }
             }),
         })
@@ -87,7 +92,7 @@ impl NetConnectionThread {
 mod tests {
     use super::*;
 
-    use crate::net_connection::NetWorker;
+    use super::super::net_connection::NetWorker;
 
     struct DefWorker;
 
@@ -136,7 +141,7 @@ mod tests {
 
     #[test]
     fn it_invokes_connection_thread() {
-        let (sender, receiver) = std::sync::mpsc::channel();
+        let (sender, receiver) = mpsc::channel();
 
         let factory = WorkerFactory;
         let mut con = NetConnectionThread::new(
@@ -158,7 +163,7 @@ mod tests {
 
     #[test]
     fn it_can_tick() {
-        let (sender, receiver) = std::sync::mpsc::channel();
+        let (sender, receiver) = mpsc::channel();
 
         let factory = WorkerFactory;
         let con = NetConnectionThread::new(
