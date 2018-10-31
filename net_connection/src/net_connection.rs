@@ -1,12 +1,10 @@
-use failure::Error;
+use super::NetResult;
+use protocol::Protocol;
 
-pub type NetResult<T> = Result<T, Error>;
-pub type JsonString = String;
-
-pub type NetHandler = Box<FnMut(NetResult<JsonString>) -> NetResult<()> + Send>;
+pub type NetHandler = Box<FnMut(NetResult<Protocol>) -> NetResult<()> + Send>;
 
 pub trait NetConnection {
-    fn send(&mut self, data: JsonString) -> NetResult<()>;
+    fn send(&mut self, data: Protocol) -> NetResult<()>;
 }
 
 pub trait NetWorker {
@@ -14,7 +12,7 @@ pub trait NetWorker {
         Ok(())
     }
 
-    fn receive(&mut self, _data: JsonString) -> NetResult<()> {
+    fn receive(&mut self, _data: Protocol) -> NetResult<()> {
         Ok(())
     }
 
@@ -32,7 +30,7 @@ pub struct NetConnectionRelay {
 }
 
 impl NetConnection for NetConnectionRelay {
-    fn send(&mut self, data: JsonString) -> NetResult<()> {
+    fn send(&mut self, data: Protocol) -> NetResult<()> {
         self.worker.receive(data)?;
         Ok(())
     }
@@ -94,7 +92,7 @@ mod tests {
             Ok(true)
         }
 
-        fn receive(&mut self, data: JsonString) -> NetResult<()> {
+        fn receive(&mut self, data: Protocol) -> NetResult<()> {
             (self.handler)(Ok(data))
         }
     }
@@ -124,7 +122,7 @@ mod tests {
 
         let res = receiver.recv().unwrap();
 
-        assert_eq!("test".to_string(), res);
+        assert_eq!(&b"test".to_vec(), res.as_json());
 
         con.destroy().unwrap();
     }
@@ -146,7 +144,7 @@ mod tests {
 
         let res = receiver.recv().unwrap();
 
-        assert_eq!("tick".to_string(), res);
+        assert_eq!(&b"tick".to_vec(), res.as_json());
 
         con.destroy().unwrap();
     }

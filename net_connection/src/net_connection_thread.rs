@@ -1,4 +1,7 @@
-use super::net_connection::{JsonString, NetConnection, NetHandler, NetResult, NetWorkerFactory};
+use super::NetResult;
+
+use super::net_connection::{NetConnection, NetHandler, NetWorkerFactory};
+use super::protocol::Protocol;
 
 use std::{
     thread,
@@ -12,12 +15,12 @@ use std::sync::{
 
 pub struct NetConnectionThread {
     keep_running: Arc<AtomicBool>,
-    send_channel: mpsc::Sender<JsonString>,
+    send_channel: mpsc::Sender<Protocol>,
     thread: thread::JoinHandle<()>,
 }
 
 impl NetConnection for NetConnectionThread {
-    fn send(&mut self, data: JsonString) -> NetResult<()> {
+    fn send(&mut self, data: Protocol) -> NetResult<()> {
         self.send_channel.send(data)?;
         Ok(())
     }
@@ -126,7 +129,7 @@ mod tests {
             Ok(true)
         }
 
-        fn receive(&mut self, data: JsonString) -> NetResult<()> {
+        fn receive(&mut self, data: Protocol) -> NetResult<()> {
             (self.handler)(Ok(data))
         }
     }
@@ -156,7 +159,7 @@ mod tests {
 
         let res = receiver.recv().unwrap();
 
-        assert_eq!("test".to_string(), res);
+        assert_eq!(&b"test".to_vec(), res.as_json());
 
         con.destroy().unwrap();
     }
@@ -176,7 +179,7 @@ mod tests {
 
         let res = receiver.recv().unwrap();
 
-        assert_eq!("tick".to_string(), res);
+        assert_eq!(&b"tick".to_vec(), res.as_json());
 
         con.destroy().unwrap();
     }

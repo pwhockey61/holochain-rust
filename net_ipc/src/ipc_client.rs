@@ -24,12 +24,6 @@ pub struct IpcClient<S: IpcSocket> {
 }
 
 impl<S: IpcSocket> IpcClient<S> {
-    /// Perform any underlying socket library cleanup. Call this before your application exits.
-    pub fn destroy_context() -> Result<()> {
-        S::destroy_context()?;
-        Ok(())
-    }
-
     /// Get a new IpcClient instance.
     pub fn new() -> Result<Self> {
         Ok(Self {

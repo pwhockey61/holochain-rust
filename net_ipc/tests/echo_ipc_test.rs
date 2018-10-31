@@ -166,7 +166,7 @@ impl TestFrame {
 
         println!("attempting to kill zeromq context");
         self.cli.close().unwrap();
-        ZmqIpcClient::destroy_context().unwrap();
+        // XXX self.cli.destroy_context().unwrap();
         println!("zeromq is off");
     }
 }

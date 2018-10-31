@@ -8,9 +8,6 @@ use zmq;
 
 /// trait that allows zmq socket abstraction
 pub trait IpcSocket {
-    /// clean up the context
-    fn destroy_context() -> Result<()>;
-
     /// create a new socket
     fn new() -> Result<Box<Self>>
     where
@@ -38,11 +35,6 @@ pub struct ZmqIpcSocket {
 }
 
 impl IpcSocket for ZmqIpcSocket {
-    fn destroy_context() -> Result<()> {
-        context::destroy()?;
-        Ok(())
-    }
-
     fn new() -> Result<Box<Self>> {
         Ok(Box::new(Self {
             socket: context::socket(zmq::ROUTER)?,
@@ -99,10 +91,6 @@ impl MockIpcSocket {
 
 #[cfg(test)]
 impl IpcSocket for MockIpcSocket {
-    fn destroy_context() -> Result<()> {
-        Ok(())
-    }
-
     fn new() -> Result<Box<Self>> {
         Ok(Box::new(Self {
             resp_queue: Vec::new(),

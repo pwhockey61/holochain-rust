@@ -10,6 +10,7 @@
 
 #[macro_use]
 extern crate failure;
+extern crate holochain_net_connection;
 #[macro_use]
 extern crate lazy_static;
 extern crate rmp_serde;
@@ -22,12 +23,13 @@ extern crate zmq;
 pub mod msg_types;
 #[macro_use]
 pub mod errors;
-mod context;
+pub mod context;
 pub mod message;
-mod socket;
-mod util;
+pub mod socket;
+pub mod util;
 
 pub mod ipc_client;
+pub mod ipc_client_2;
 
 // re-export the struct people will actually use
 pub use ipc_client::ZmqIpcClient;
