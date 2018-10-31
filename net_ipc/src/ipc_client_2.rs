@@ -12,11 +12,13 @@ use holochain_net_connection::{
         Protocol,
     },
     net_connection::{
+        NetHandler,
         NetWorker,
     },
 };
 
 pub struct IpcClient {
+    handler: NetHandler,
     socket: Box<IpcSocket>,
     last_recv_millis: f64,
     last_send_millis: f64,
@@ -34,7 +36,6 @@ impl NetWorker for IpcClient {
     }
 
     fn tick(&mut self) -> NetResult<bool> {
-        println!("ipc client tick");
         let mut did_something = false;
 
         if let Some(msg) = self.priv_proc_message()? {
@@ -58,8 +59,9 @@ impl NetWorker for IpcClient {
 }
 
 impl IpcClient {
-    pub fn new(socket: Box<IpcSocket>) -> NetResult<Self> {
+    pub fn new(handler: NetHandler, socket: Box<IpcSocket>) -> NetResult<Self> {
         Ok(Self {
+            handler,
             socket,
             last_recv_millis: get_millis(),
             last_send_millis: 0.0,
@@ -91,6 +93,7 @@ impl IpcClient {
         self.priv_send(&Protocol::Ping(PingData {
             sent: get_millis()
         }))?;
+        self.priv_send(&"hello".into())?;
         Ok(())
     }
 

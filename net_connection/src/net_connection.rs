@@ -21,9 +21,7 @@ pub trait NetWorker {
     }
 }
 
-pub trait NetWorkerFactory: Send {
-    fn new(&self, handler: NetHandler) -> NetResult<Box<NetWorker>>;
-}
+pub type NetWorkerFactory = Box<FnMut(NetHandler) -> NetResult<Box<NetWorker>> + Send>;
 
 pub struct NetConnectionRelay {
     worker: Box<NetWorker>,
@@ -46,9 +44,9 @@ impl NetConnectionRelay {
         self.worker.tick()
     }
 
-    pub fn new(handler: NetHandler, worker_factory: Box<NetWorkerFactory>) -> NetResult<Self> {
+    pub fn new(handler: NetHandler, mut worker_factory: NetWorkerFactory) -> NetResult<Self> {
         Ok(NetConnectionRelay {
-            worker: worker_factory.new(handler)?,
+            worker: worker_factory(handler)?,
         })
     }
 }
@@ -63,19 +61,10 @@ mod tests {
 
     impl NetWorker for DefWorker {}
 
-    struct DefWorkerFactory;
-
-    impl NetWorkerFactory for DefWorkerFactory {
-        fn new(&self, _handler: NetHandler) -> NetResult<Box<NetWorker>> {
-            Ok(Box::new(DefWorker))
-        }
-    }
-
     #[test]
     fn it_can_defaults() {
-        let factory = DefWorkerFactory;
         let mut con =
-            NetConnectionRelay::new(Box::new(move |_r| Ok(())), Box::new(factory)).unwrap();
+            NetConnectionRelay::new(Box::new(move |_r| Ok(())), Box::new(|_h| Ok(Box::new(DefWorker)))).unwrap();
 
         con.send("test".into()).unwrap();
         con.tick().unwrap();
@@ -97,25 +86,18 @@ mod tests {
         }
     }
 
-    struct WorkerFactory;
-
-    impl NetWorkerFactory for WorkerFactory {
-        fn new(&self, handler: NetHandler) -> NetResult<Box<NetWorker>> {
-            Ok(Box::new(Worker { handler }))
-        }
-    }
-
     #[test]
     fn it_invokes_connection_relay() {
         let (sender, receiver) = mpsc::channel();
 
-        let factory = WorkerFactory;
         let mut con = NetConnectionRelay::new(
             Box::new(move |r| {
                 sender.send(r?)?;
                 Ok(())
             }),
-            Box::new(factory),
+            Box::new(|h| {
+                Ok(Box::new(Worker { handler: h }))
+            }),
         ).unwrap();
 
         con.send("test".into()).unwrap();
@@ -131,13 +113,14 @@ mod tests {
     fn it_can_tick() {
         let (sender, receiver) = mpsc::channel();
 
-        let factory = WorkerFactory;
         let mut con = NetConnectionRelay::new(
             Box::new(move |r| {
                 sender.send(r?)?;
                 Ok(())
             }),
-            Box::new(factory),
+            Box::new(|h| {
+                Ok(Box::new(Worker { handler: h }))
+            }),
         ).unwrap();
 
         con.tick().unwrap();

@@ -1,11 +1,82 @@
 use serde_bytes;
+use serde::{
+    ser::{
+        Serialize,
+        Serializer,
+        SerializeMap,
+    },
+    de::{
+        Deserialize,
+        Deserializer,
+        Visitor,
+        MapAccess,
+    },
+};
 
-#[derive(Serialize, Deserialize, Debug, Clone, PartialEq)]
+use std::fmt;
+use std::marker::PhantomData;
+
+#[derive(Deserialize, Debug, Clone, PartialEq)]
 pub enum Protocol {
+    #[serde(rename = "namedBinary")]
     NamedBinary(NamedBinaryData),
+    #[serde(rename = "json")]
     Json(#[serde(with = "serde_bytes")] Vec<u8>),
+    #[serde(rename = "ping")]
     Ping(PingData),
+    #[serde(rename = "pong")]
     Pong(PongData),
+}
+
+impl Serialize for Protocol {
+    fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
+    where
+        S: Serializer,
+    {
+        let mut map = serializer.serialize_map(Some(1))?;
+        match self {
+            Protocol::NamedBinary(nb) => {
+                map.serialize_entry("namedBinary", nb)?;
+            },
+            Protocol::Json(json) => {
+                map.serialize_entry("json", json)?;
+            },
+            Protocol::Ping(ping) => {
+                map.serialize_entry("ping", ping)?;
+            },
+            Protocol::Pong(pong) => {
+                map.serialize_entry("pong", pong)?;
+            },
+        }
+        map.end()
+    }
+}
+
+struct ProtocolVisitor;
+
+impl ProtocolVisitor {
+    fn new() -> Self {
+        ProtocolVisitor
+    }
+}
+
+impl<'de> Visitor<'de> for ProtocolVisitor {
+    type Value = Protocol;
+
+    fn expecting(&self, formatter: &mut fmt::Formatter) -> fmt::Result {
+        formatter.write_str("a Protocol map")
+    }
+
+    fn visit_map<M>(self, mut access: M) -> Result<Protocol, M::Error>
+    where
+        M: MapAccess<'de>,
+    {
+        while let Some((key, value)) = access.next_entry::<String, _>()? {
+            println!("got: {:?} {:?}", key, value);
+        }
+
+        Ok(Protocol::Json("hi".into()))
+    }
 }
 
 impl<'a> From<&'a str> for Protocol {
@@ -77,6 +148,19 @@ pub struct NamedBinaryData {
 pub struct PingData {
     pub sent: f64,
 }
+
+/*
+impl Serialize for PingData {
+    fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
+    where
+        S: Serializer,
+    {
+        let mut map = serializer.serialize_map(Some(1))?;
+        map.serialize_entry("sent", &self.sent)?;
+        map.end()
+    }
+}
+*/
 
 #[derive(Serialize, Deserialize, Debug, Clone, PartialEq)]
 pub struct PongData {
