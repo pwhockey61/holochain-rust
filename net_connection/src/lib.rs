@@ -1,6 +1,9 @@
+extern crate byteorder;
 #[macro_use]
 extern crate failure;
+extern crate rmp;
 extern crate rmp_serde;
+#[macro_use]
 extern crate serde;
 extern crate serde_bytes;
 #[macro_use]

@@ -4,7 +4,9 @@ version = "0.1.0"
 authors = ["neonphog <neonphog@gmail.com>"]
 
 [dependencies]
+byteorder = "1"
 failure = "0.1.3"
+rmp = "0.8"
 rmp-serde = "0.13.7"
 serde = "1"
 serde_bytes = "0.10.4"

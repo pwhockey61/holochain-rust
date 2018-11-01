@@ -1,87 +1,87 @@
 use serde_bytes;
-use serde::{
-    ser::{
-        Serialize,
-        Serializer,
-        SerializeMap,
-    },
-    de::{
-        Deserialize,
-        Deserializer,
-        Visitor,
-        MapAccess,
-    },
-};
+use rmp_serde;
 
-use std::fmt;
-use std::marker::PhantomData;
+#[derive(Serialize, Deserialize, Debug, Clone, PartialEq)]
+pub struct JsonString(String);
 
-#[derive(Deserialize, Debug, Clone, PartialEq)]
+#[derive(Debug, Clone, PartialEq)]
 pub enum Protocol {
-    #[serde(rename = "namedBinary")]
     NamedBinary(NamedBinaryData),
-    #[serde(rename = "json")]
-    Json(#[serde(with = "serde_bytes")] Vec<u8>),
-    #[serde(rename = "ping")]
+    Json(JsonString),
     Ping(PingData),
-    #[serde(rename = "pong")]
     Pong(PongData),
 }
 
-impl Serialize for Protocol {
-    fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
-    where
-        S: Serializer,
-    {
-        let mut map = serializer.serialize_map(Some(1))?;
-        match self {
+impl<'a> From<&'a Protocol> for NamedBinaryData {
+    fn from(p: &'a Protocol) -> Self {
+        match p {
             Protocol::NamedBinary(nb) => {
-                map.serialize_entry("namedBinary", nb)?;
+                NamedBinaryData {
+                    name: b"namedBinary".to_vec(),
+                    data: rmp_serde::to_vec_named(nb).unwrap(),
+                }
             },
-            Protocol::Json(json) => {
-                map.serialize_entry("json", json)?;
+            Protocol::Json(j) => {
+                NamedBinaryData {
+                    name: b"json".to_vec(),
+                    data: j.0.as_bytes().to_vec(),
+                }
             },
-            Protocol::Ping(ping) => {
-                map.serialize_entry("ping", ping)?;
+            Protocol::Ping(p) => {
+                NamedBinaryData {
+                    name: b"ping".to_vec(),
+                    data: rmp_serde::to_vec_named(p).unwrap(),
+                }
             },
-            Protocol::Pong(pong) => {
-                map.serialize_entry("pong", pong)?;
-            },
+            Protocol::Pong(p) => {
+                NamedBinaryData {
+                    name: b"pong".to_vec(),
+                    data: rmp_serde::to_vec_named(p).unwrap(),
+                }
+            }
         }
-        map.end()
     }
 }
 
-struct ProtocolVisitor;
-
-impl ProtocolVisitor {
-    fn new() -> Self {
-        ProtocolVisitor
+impl From<Protocol> for NamedBinaryData {
+    fn from(p: Protocol) -> Self {
+        (&p).into()
     }
 }
 
-impl<'de> Visitor<'de> for ProtocolVisitor {
-    type Value = Protocol;
-
-    fn expecting(&self, formatter: &mut fmt::Formatter) -> fmt::Result {
-        formatter.write_str("a Protocol map")
-    }
-
-    fn visit_map<M>(self, mut access: M) -> Result<Protocol, M::Error>
-    where
-        M: MapAccess<'de>,
-    {
-        while let Some((key, value)) = access.next_entry::<String, _>()? {
-            println!("got: {:?} {:?}", key, value);
+impl<'a> From<&'a NamedBinaryData> for Protocol {
+    fn from(nb: &'a NamedBinaryData) -> Self {
+        match nb.name.as_slice() {
+            b"namedBinary" => {
+                let sub: NamedBinaryData = rmp_serde::from_slice(&nb.data).unwrap();
+                Protocol::NamedBinary(sub)
+            },
+            b"json" => {
+                Protocol::Json(JsonString(String::from_utf8_lossy(
+                            &nb.data).to_string()))
+            },
+            b"ping" => {
+                let sub: PingData = rmp_serde::from_slice(&nb.data).unwrap();
+                Protocol::Ping(sub)
+            },
+            b"pong" => {
+                let sub: PongData = rmp_serde::from_slice(&nb.data).unwrap();
+                Protocol::Pong(sub)
+            },
+            _ => panic!("bad Protocol type: {}", String::from_utf8_lossy(&nb.name))
         }
+    }
+}
 
-        Ok(Protocol::Json("hi".into()))
+impl From<NamedBinaryData> for Protocol {
+    fn from(nb: NamedBinaryData) -> Self {
+        (&nb).into()
     }
 }
 
 impl<'a> From<&'a str> for Protocol {
     fn from(s: &'a str) -> Self {
-        Protocol::Json(s.as_bytes().to_vec())
+        Protocol::Json(JsonString(s.to_string()))
     }
 }
 
@@ -122,14 +122,14 @@ macro_rules! simple_access {
 impl Protocol {
     simple_access! {
         is_named_binary as_named_binary NamedBinary NamedBinaryData
-        is_json as_json Json Vec<u8>
+        is_json as_json Json JsonString
         is_ping as_ping Ping PingData
         is_pong as_pong Pong PongData
     }
 
     pub fn as_json_string(&self) -> String {
         if let Protocol::Json(data) = self {
-            String::from_utf8_lossy(&data).to_string()
+            data.0.clone()
         } else {
             panic!("as_json_string called with bad type");
         }
@@ -175,8 +175,8 @@ mod tests {
 
     macro_rules! simple_convert {
         ($e:expr) => {{
-            let wire = rmp_serde::to_vec($e).unwrap();
-            let res: Protocol = rmp_serde::from_slice(&wire).unwrap();
+            let wire: NamedBinaryData = $e.into();
+            let res: Protocol = wire.into();
             res
         }}
     }
@@ -200,15 +200,16 @@ mod tests {
 
     #[test]
     fn it_can_convert_json() {
-        let json = "{\"test\": \"hello\"}".to_string();
+        let json_str = "{\"test\": \"hello\"}";
+        let json: Protocol = json_str.into();
 
-        let res = simple_convert!(&Protocol::Json(json.as_bytes().to_vec()));
+        let res = simple_convert!(&json);
 
         assert!(res.is_json());
 
-        let res = String::from_utf8_lossy(res.as_json());
+        let res = res.as_json_string();
 
-        assert_eq!(json, res);
+        assert_eq!(json_str, res);
     }
 
     #[test]

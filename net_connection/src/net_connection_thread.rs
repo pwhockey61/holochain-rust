@@ -143,7 +143,7 @@ mod tests {
 
         let res = receiver.recv().unwrap();
 
-        assert_eq!(&b"test".to_vec(), res.as_json());
+        assert_eq!("test".to_string(), res.as_json_string());
 
         con.destroy().unwrap();
     }
@@ -164,7 +164,7 @@ mod tests {
 
         let res = receiver.recv().unwrap();
 
-        assert_eq!(&b"tick".to_vec(), res.as_json());
+        assert_eq!("tick".to_string(), res.as_json_string());
 
         con.destroy().unwrap();
     }

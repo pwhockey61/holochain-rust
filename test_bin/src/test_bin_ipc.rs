@@ -3,6 +3,9 @@ extern crate holochain_net_ipc;
 
 use holochain_net_connection::{
     NetResult,
+    protocol::{
+        Protocol,
+    },
     net_connection::{
         NetConnection,
     },
@@ -47,10 +50,10 @@ fn exec() -> NetResult<()> {
 
     println!("testing against uri: {}", ipc_uri);
 
-    let (sender, receiver) = mpsc::channel();
+    let (sender, receiver) = mpsc::channel::<Protocol>();
 
     let mut con = NetConnectionThread::new(Box::new(move |r| {
-        sender.send(r?.as_json_string())?;
+        sender.send(r?)?;
         Ok(())
     }), Box::new(move |h| {
         let mut socket = ZmqIpcSocket::new()?;
@@ -59,11 +62,13 @@ fn exec() -> NetResult<()> {
         Ok(Box::new(IpcClient::new(h, socket)?))
     }))?;
 
-    con.send("{\"test\":\"hello\"}".into())?;
+    con.send("{\"frm_test_ipc\":\"hello\"}".into())?;
 
-    let z = receiver.recv()?;
+    loop {
+        let z = receiver.recv()?;
 
-    println!("got: {:?}", z);
+        println!("got: {:?}", z);
+    }
 
     con.destroy()?;
 
