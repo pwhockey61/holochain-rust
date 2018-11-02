@@ -10,6 +10,7 @@ pub enum Protocol {
     Json(JsonString),
     Ping(PingData),
     Pong(PongData),
+    P2pReady,
 }
 
 impl<'a> From<&'a Protocol> for NamedBinaryData {
@@ -30,6 +31,10 @@ impl<'a> From<&'a Protocol> for NamedBinaryData {
             Protocol::Pong(p) => NamedBinaryData {
                 name: b"pong".to_vec(),
                 data: rmp_serde::to_vec_named(p).unwrap(),
+            },
+            Protocol::P2pReady => NamedBinaryData {
+                name: b"p2pReady".to_vec(),
+                data: Vec::new(),
             },
         }
     }
@@ -57,6 +62,7 @@ impl<'a> From<&'a NamedBinaryData> for Protocol {
                 let sub: PongData = rmp_serde::from_slice(&nb.data).unwrap();
                 Protocol::Pong(sub)
             }
+            b"p2pReady" => Protocol::P2pReady,
             _ => panic!("bad Protocol type: {}", String::from_utf8_lossy(&nb.name)),
         }
     }

@@ -131,7 +131,7 @@ impl IpcClient {
     /// Send a heartbeat message to the ipc server.
     fn priv_ping(&mut self) -> NetResult<()> {
         self.priv_send(&Protocol::Ping(PingData { sent: get_millis() }))?;
-        self.priv_send(&"{\"method\": \"requestState\"}".into())?;
+        //self.priv_send(&"{\"method\": \"requestState\"}".into())?;
         /*
         self.priv_send(&"{\"test\": \"hello\"}".into())?;
         self.priv_send(&Protocol::NamedBinary(NamedBinaryData {

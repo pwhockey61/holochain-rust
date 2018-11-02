@@ -1,15 +1,11 @@
+extern crate holochain_net;
 extern crate holochain_net_connection;
-extern crate holochain_net_ipc;
 
 use holochain_net_connection::{
-    net_connection::NetConnection, net_connection_thread::NetConnectionThread, protocol::Protocol,
-    NetResult,
+    net_connection_thread::NetConnectionThread, protocol::Protocol, NetResult,
 };
 
-use holochain_net_ipc::{
-    ipc_client::IpcClient,
-    socket::{IpcSocket, ZmqIpcSocket},
-};
+use holochain_net::ipc_net_worker::{IpcNetWorker, IpcNetWorkerConfig, IpcSocketType};
 
 use std::sync::mpsc;
 
@@ -39,6 +35,7 @@ fn exec() -> NetResult<()> {
 
     let (sender, receiver) = mpsc::channel::<Protocol>();
 
+    /*
     let mut con = NetConnectionThread::new(
         Box::new(move |r| {
             sender.send(r?)?;
@@ -51,8 +48,39 @@ fn exec() -> NetResult<()> {
             Ok(Box::new(IpcClient::new(h, socket)?))
         }),
     )?;
+    */
 
-    //con.send("{\"frm_test_ipc\":\"hello\"}".into())?;
+    #[derive(Debug)]
+    struct Config {
+        socket_type: IpcSocketType,
+        uri: String,
+    }
+
+    impl IpcNetWorkerConfig for Config {
+        fn get_socket_type<'a>(&'a self) -> &'a IpcSocketType {
+            &self.socket_type
+        }
+
+        fn get_ipc_uri<'a>(&'a self) -> &'a str {
+            &self.uri
+        }
+    }
+
+    let mut con = NetConnectionThread::new(
+        Box::new(move |r| {
+            sender.send(r?)?;
+            Ok(())
+        }),
+        Box::new(move |h| {
+            Ok(Box::new(IpcNetWorker::new(
+                h,
+                Box::new(Config {
+                    socket_type: IpcSocketType::Zmq,
+                    uri: ipc_uri.clone(),
+                }),
+            )?))
+        }),
+    )?;
 
     loop {
         let z = receiver.recv()?;
