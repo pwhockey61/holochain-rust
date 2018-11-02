@@ -63,8 +63,10 @@ mod tests {
 
     #[test]
     fn it_can_defaults() {
-        let mut con =
-            NetConnectionRelay::new(Box::new(move |_r| Ok(())), Box::new(|_h| Ok(Box::new(DefWorker)))).unwrap();
+        let mut con = NetConnectionRelay::new(
+            Box::new(move |_r| Ok(())),
+            Box::new(|_h| Ok(Box::new(DefWorker))),
+        ).unwrap();
 
         con.send("test".into()).unwrap();
         con.tick().unwrap();
@@ -95,9 +97,7 @@ mod tests {
                 sender.send(r?)?;
                 Ok(())
             }),
-            Box::new(|h| {
-                Ok(Box::new(Worker { handler: h }))
-            }),
+            Box::new(|h| Ok(Box::new(Worker { handler: h }))),
         ).unwrap();
 
         con.send("test".into()).unwrap();
@@ -118,9 +118,7 @@ mod tests {
                 sender.send(r?)?;
                 Ok(())
             }),
-            Box::new(|h| {
-                Ok(Box::new(Worker { handler: h }))
-            }),
+            Box::new(|h| Ok(Box::new(Worker { handler: h }))),
         ).unwrap();
 
         con.tick().unwrap();

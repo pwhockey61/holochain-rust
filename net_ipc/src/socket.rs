@@ -67,14 +67,12 @@ impl IpcSocket for ZmqIpcSocket {
     }
 }
 
-#[cfg(test)]
 /// This is a concrete implementation of the IpcSocket trait for use in testing
 pub struct MockIpcSocket {
     resp_queue: Vec<Vec<Vec<u8>>>,
     sent_queue: Vec<Vec<Vec<u8>>>,
 }
 
-#[cfg(test)]
 impl MockIpcSocket {
     pub fn inject_response(&mut self, data: Vec<Vec<u8>>) {
         self.resp_queue.push(data);
@@ -89,7 +87,6 @@ impl MockIpcSocket {
     }
 }
 
-#[cfg(test)]
 impl IpcSocket for MockIpcSocket {
     fn new() -> Result<Box<Self>> {
         Ok(Box::new(Self {

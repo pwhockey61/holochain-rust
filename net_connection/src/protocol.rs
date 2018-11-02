@@ -1,5 +1,5 @@
-use serde_bytes;
 use rmp_serde;
+use serde_bytes;
 
 #[derive(Serialize, Deserialize, Debug, Clone, PartialEq)]
 pub struct JsonString(String);
@@ -15,30 +15,22 @@ pub enum Protocol {
 impl<'a> From<&'a Protocol> for NamedBinaryData {
     fn from(p: &'a Protocol) -> Self {
         match p {
-            Protocol::NamedBinary(nb) => {
-                NamedBinaryData {
-                    name: b"namedBinary".to_vec(),
-                    data: rmp_serde::to_vec_named(nb).unwrap(),
-                }
+            Protocol::NamedBinary(nb) => NamedBinaryData {
+                name: b"namedBinary".to_vec(),
+                data: rmp_serde::to_vec_named(nb).unwrap(),
             },
-            Protocol::Json(j) => {
-                NamedBinaryData {
-                    name: b"json".to_vec(),
-                    data: j.0.as_bytes().to_vec(),
-                }
+            Protocol::Json(j) => NamedBinaryData {
+                name: b"json".to_vec(),
+                data: j.0.as_bytes().to_vec(),
             },
-            Protocol::Ping(p) => {
-                NamedBinaryData {
-                    name: b"ping".to_vec(),
-                    data: rmp_serde::to_vec_named(p).unwrap(),
-                }
+            Protocol::Ping(p) => NamedBinaryData {
+                name: b"ping".to_vec(),
+                data: rmp_serde::to_vec_named(p).unwrap(),
             },
-            Protocol::Pong(p) => {
-                NamedBinaryData {
-                    name: b"pong".to_vec(),
-                    data: rmp_serde::to_vec_named(p).unwrap(),
-                }
-            }
+            Protocol::Pong(p) => NamedBinaryData {
+                name: b"pong".to_vec(),
+                data: rmp_serde::to_vec_named(p).unwrap(),
+            },
         }
     }
 }
@@ -55,20 +47,17 @@ impl<'a> From<&'a NamedBinaryData> for Protocol {
             b"namedBinary" => {
                 let sub: NamedBinaryData = rmp_serde::from_slice(&nb.data).unwrap();
                 Protocol::NamedBinary(sub)
-            },
-            b"json" => {
-                Protocol::Json(JsonString(String::from_utf8_lossy(
-                            &nb.data).to_string()))
-            },
+            }
+            b"json" => Protocol::Json(JsonString(String::from_utf8_lossy(&nb.data).to_string())),
             b"ping" => {
                 let sub: PingData = rmp_serde::from_slice(&nb.data).unwrap();
                 Protocol::Ping(sub)
-            },
+            }
             b"pong" => {
                 let sub: PongData = rmp_serde::from_slice(&nb.data).unwrap();
                 Protocol::Pong(sub)
-            },
-            _ => panic!("bad Protocol type: {}", String::from_utf8_lossy(&nb.name))
+            }
+            _ => panic!("bad Protocol type: {}", String::from_utf8_lossy(&nb.name)),
         }
     }
 }
@@ -178,7 +167,7 @@ mod tests {
             let wire: NamedBinaryData = $e.into();
             let res: Protocol = wire.into();
             res
-        }}
+        }};
     }
 
     #[test]
@@ -214,9 +203,7 @@ mod tests {
 
     #[test]
     fn it_can_convert_ping() {
-        let src = Protocol::Ping(PingData {
-            sent: 42.0,
-        });
+        let src = Protocol::Ping(PingData { sent: 42.0 });
 
         let res = simple_convert!(&src);
 

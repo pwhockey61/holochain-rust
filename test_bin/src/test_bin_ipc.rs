@@ -2,26 +2,13 @@ extern crate holochain_net_connection;
 extern crate holochain_net_ipc;
 
 use holochain_net_connection::{
+    net_connection::NetConnection, net_connection_thread::NetConnectionThread, protocol::Protocol,
     NetResult,
-    protocol::{
-        Protocol,
-    },
-    net_connection::{
-        NetConnection,
-    },
-    net_connection_thread::{
-        NetConnectionThread,
-    },
 };
 
 use holochain_net_ipc::{
-    socket::{
-        IpcSocket,
-        ZmqIpcSocket,
-    },
-    ipc_client_2::{
-        IpcClient
-    },
+    ipc_client::IpcClient,
+    socket::{IpcSocket, ZmqIpcSocket},
 };
 
 use std::sync::mpsc;
@@ -52,17 +39,20 @@ fn exec() -> NetResult<()> {
 
     let (sender, receiver) = mpsc::channel::<Protocol>();
 
-    let mut con = NetConnectionThread::new(Box::new(move |r| {
-        sender.send(r?)?;
-        Ok(())
-    }), Box::new(move |h| {
-        let mut socket = ZmqIpcSocket::new()?;
-        socket.connect(&ipc_uri)?;
+    let mut con = NetConnectionThread::new(
+        Box::new(move |r| {
+            sender.send(r?)?;
+            Ok(())
+        }),
+        Box::new(move |h| {
+            let mut socket = ZmqIpcSocket::new()?;
+            socket.connect(&ipc_uri)?;
 
-        Ok(Box::new(IpcClient::new(h, socket)?))
-    }))?;
+            Ok(Box::new(IpcClient::new(h, socket)?))
+        }),
+    )?;
 
-    con.send("{\"frm_test_ipc\":\"hello\"}".into())?;
+    //con.send("{\"frm_test_ipc\":\"hello\"}".into())?;
 
     loop {
         let z = receiver.recv()?;

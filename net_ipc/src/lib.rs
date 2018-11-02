@@ -20,16 +20,10 @@ extern crate serde_bytes;
 extern crate serde_derive;
 extern crate zmq;
 
-pub mod msg_types;
 #[macro_use]
 pub mod errors;
 pub mod context;
-pub mod message;
 pub mod socket;
 pub mod util;
 
 pub mod ipc_client;
-pub mod ipc_client_2;
-
-// re-export the struct people will actually use
-pub use ipc_client::ZmqIpcClient;

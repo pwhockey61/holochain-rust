@@ -1,12 +1,11 @@
 use super::NetResult;
 
-use super::net_connection::{NetConnection, NetHandler, NetWorkerFactory};
-use super::protocol::Protocol;
-
-use std::{
-    thread,
-    time,
+use super::{
+    net_connection::{NetConnection, NetHandler, NetWorkerFactory},
+    protocol::Protocol,
 };
+
+use std::{thread, time};
 
 use std::sync::{
     atomic::{AtomicBool, Ordering},
@@ -103,8 +102,10 @@ mod tests {
 
     #[test]
     fn it_can_defaults() {
-        let mut con =
-            NetConnectionThread::new(Box::new(move |_r| Ok(())), Box::new(|_h| Ok(Box::new(DefWorker)))).unwrap();
+        let mut con = NetConnectionThread::new(
+            Box::new(move |_r| Ok(())),
+            Box::new(|_h| Ok(Box::new(DefWorker))),
+        ).unwrap();
 
         con.send("test".into()).unwrap();
         con.destroy().unwrap();
@@ -134,9 +135,7 @@ mod tests {
                 sender.send(r?)?;
                 Ok(())
             }),
-            Box::new(|h| {
-                Ok(Box::new(Worker { handler: h }))
-            })
+            Box::new(|h| Ok(Box::new(Worker { handler: h }))),
         ).unwrap();
 
         con.send("test".into()).unwrap();
@@ -157,9 +156,7 @@ mod tests {
                 sender.send(r?)?;
                 Ok(())
             }),
-            Box::new(|h| {
-                Ok(Box::new(Worker { handler: h }))
-            }),
+            Box::new(|h| Ok(Box::new(Worker { handler: h }))),
         ).unwrap();
 
         let res = receiver.recv().unwrap();
