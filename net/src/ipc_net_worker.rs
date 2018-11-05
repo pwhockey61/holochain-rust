@@ -6,24 +6,13 @@ use holochain_net_ipc::{
 
 use holochain_net_connection::{
     net_connection::{NetConnection, NetConnectionRelay, NetHandler, NetWorker},
-    protocol::Protocol,
+    protocol::{JsonString, Protocol},
     NetResult,
 };
 
 use std::{fmt::Debug, sync::mpsc};
 
 use serde_json;
-
-#[derive(Debug, Clone, PartialEq, Eq)]
-pub enum IpcSocketType {
-    Mock,
-    Zmq,
-}
-
-pub trait IpcNetWorkerConfig: Send + Debug {
-    fn get_socket_type<'a>(&'a self) -> &'a IpcSocketType;
-    fn get_ipc_uri<'a>(&'a self) -> &'a str;
-}
 
 pub struct IpcNetWorker {
     handler: NetHandler,
@@ -41,6 +30,7 @@ pub struct IpcNetWorker {
 
 impl NetWorker for IpcNetWorker {
     fn destroy(self: Box<Self>) -> NetResult<()> {
+        self.ipc_relay.destroy()?;
         Ok(())
     }
 
@@ -53,7 +43,7 @@ impl NetWorker for IpcNetWorker {
         let mut did_something = false;
 
         if &self.state != "ready" {
-            self.priv_check_init();
+            self.priv_check_init()?;
         }
 
         if self.ipc_relay.tick()? {
@@ -70,9 +60,9 @@ impl NetWorker for IpcNetWorker {
 
                 if json.is_object() && json["method"].is_string() {
                     if json["method"] == "state" {
-                        self.priv_handle_state(json);
+                        self.priv_handle_state(json)?;
                     } else if json["method"] == "defaultConfig" {
-                        self.priv_handle_default_config(json);
+                        self.priv_handle_default_config(json)?;
                     }
                 }
             }
@@ -85,7 +75,9 @@ impl NetWorker for IpcNetWorker {
 }
 
 impl IpcNetWorker {
-    pub fn new(handler: NetHandler, config: Box<IpcNetWorkerConfig>) -> NetResult<Self> {
+    pub fn new(handler: NetHandler, config: &JsonString) -> NetResult<Self> {
+        let config: serde_json::Value = config.into();
+
         let (ipc_sender, ipc_relay_receiver) = mpsc::channel::<Protocol>();
 
         let ipc_relay = NetConnectionRelay::new(
@@ -94,11 +86,12 @@ impl IpcNetWorker {
                 Ok(())
             }),
             Box::new(move |h| {
-                let mut socket: Box<IpcSocket> = match config.get_socket_type() {
-                    IpcSocketType::Mock => MockIpcSocket::new()?,
-                    IpcSocketType::Zmq => ZmqIpcSocket::new()?,
+                let mut socket: Box<IpcSocket> = match config["socketType"].as_str().unwrap() {
+                    "mock" => MockIpcSocket::new()?,
+                    "zmq" => ZmqIpcSocket::new()?,
+                    _ => bail!("unexpected socketType: {}", config["socketType"]),
                 };
-                socket.connect(config.get_ipc_uri())?;
+                socket.connect(config["ipcUri"].as_str().unwrap())?;
 
                 Ok(Box::new(IpcClient::new(h, socket)?))
             }),

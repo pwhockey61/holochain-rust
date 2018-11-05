@@ -11,6 +11,7 @@ holochain_core_api = { path = "../core_api" }
 holochain_cas_implementations = { path="../cas_implementations" }
 holochain_net_connection = { path="../net_connection" }
 holochain_net = { path="../net" }
+serde_json = "1"
 tempfile = "3"
 
 [[bin]]

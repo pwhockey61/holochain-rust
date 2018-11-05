@@ -1,8 +1,57 @@
 use rmp_serde;
 use serde_bytes;
+use serde_json;
 
 #[derive(Serialize, Deserialize, Debug, Clone, PartialEq)]
-pub struct JsonString(String);
+pub struct JsonString(pub String);
+
+impl<'a> From<&'a serde_json::Value> for JsonString {
+    fn from(v: &'a serde_json::Value) -> Self {
+        JsonString(v.to_string())
+    }
+}
+
+impl From<serde_json::Value> for JsonString {
+    fn from(v: serde_json::Value) -> Self {
+        JsonString::from(&v)
+    }
+}
+
+impl<'a> From<&'a JsonString> for serde_json::Value {
+    fn from(s: &'a JsonString) -> Self {
+        serde_json::from_str(&s.0).unwrap()
+    }
+}
+
+impl From<JsonString> for serde_json::Value {
+    fn from(s: JsonString) -> Self {
+        serde_json::Value::from(&s)
+    }
+}
+
+impl From<JsonString> for String {
+    fn from(j: JsonString) -> Self {
+        j.0.clone()
+    }
+}
+
+impl<'a> From<&'a str> for JsonString {
+    fn from(s: &'a str) -> Self {
+        JsonString(s.to_string())
+    }
+}
+
+impl<'a> From<&'a String> for JsonString {
+    fn from(s: &'a String) -> Self {
+        JsonString(s.to_string())
+    }
+}
+
+impl From<String> for JsonString {
+    fn from(s: String) -> Self {
+        JsonString::from(&s)
+    }
+}
 
 #[derive(Debug, Clone, PartialEq)]
 pub enum Protocol {

@@ -1,11 +1,16 @@
 extern crate holochain_net;
 extern crate holochain_net_connection;
+#[macro_use]
+extern crate serde_json;
 
 use holochain_net_connection::{
     net_connection_thread::NetConnectionThread, protocol::Protocol, NetResult,
 };
 
-use holochain_net::ipc_net_worker::{IpcNetWorker, IpcNetWorkerConfig, IpcSocketType};
+use holochain_net::{
+    ipc_net_worker::IpcNetWorker,
+    p2p_network::P2pNetwork,
+};
 
 use std::sync::mpsc;
 
@@ -35,57 +40,29 @@ fn exec() -> NetResult<()> {
 
     let (sender, receiver) = mpsc::channel::<Protocol>();
 
-    /*
-    let mut con = NetConnectionThread::new(
+    let mut con = P2pNetwork::new(
         Box::new(move |r| {
             sender.send(r?)?;
             Ok(())
         }),
-        Box::new(move |h| {
-            let mut socket = ZmqIpcSocket::new()?;
-            socket.connect(&ipc_uri)?;
-
-            Ok(Box::new(IpcClient::new(h, socket)?))
-        }),
-    )?;
-    */
-
-    #[derive(Debug)]
-    struct Config {
-        socket_type: IpcSocketType,
-        uri: String,
-    }
-
-    impl IpcNetWorkerConfig for Config {
-        fn get_socket_type<'a>(&'a self) -> &'a IpcSocketType {
-            &self.socket_type
-        }
-
-        fn get_ipc_uri<'a>(&'a self) -> &'a str {
-            &self.uri
-        }
-    }
-
-    let mut con = NetConnectionThread::new(
-        Box::new(move |r| {
-            sender.send(r?)?;
-            Ok(())
-        }),
-        Box::new(move |h| {
-            Ok(Box::new(IpcNetWorker::new(
-                h,
-                Box::new(Config {
-                    socket_type: IpcSocketType::Zmq,
-                    uri: ipc_uri.clone(),
-                }),
-            )?))
-        }),
+        &json!({
+            "backend": "ipc",
+            "config": {
+                "socketType": "zmq",
+                "ipcUri": ipc_uri,
+            }
+        }).into(),
     )?;
 
     loop {
         let z = receiver.recv()?;
 
         println!("got: {:?}", z);
+
+        if let Protocol::P2pReady = z {
+            println!("p2p ready!!");
+            break;
+        }
     }
 
     con.destroy()?;

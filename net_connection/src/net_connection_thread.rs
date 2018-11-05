@@ -12,6 +12,7 @@ use std::sync::{
     mpsc, Arc,
 };
 
+#[derive(Debug)]
 pub struct NetConnectionThread {
     keep_running: Arc<AtomicBool>,
     send_channel: mpsc::Sender<Protocol>,
@@ -48,7 +49,7 @@ impl NetConnectionThread {
                 let mut us = 100_u64;
                 let mut worker = match worker_factory(handler) {
                     Ok(w) => w,
-                    Err(e) => panic!(e),
+                    Err(e) => panic!("{:?}", e),
                 };
 
                 while keep_running2.load(Ordering::Relaxed) {
@@ -59,7 +60,7 @@ impl NetConnectionThread {
                             did_something = true;
                             match worker.receive(data) {
                                 Ok(_) => (),
-                                Err(e) => panic!(e),
+                                Err(e) => panic!("{:?}", e),
                             };
                         }
                         Err(_) => (),
