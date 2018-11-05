@@ -193,19 +193,6 @@ pub struct PingData {
     pub sent: f64,
 }
 
-/*
-impl Serialize for PingData {
-    fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
-    where
-        S: Serializer,
-    {
-        let mut map = serializer.serialize_map(Some(1))?;
-        map.serialize_entry("sent", &self.sent)?;
-        map.end()
-    }
-}
-*/
-
 #[derive(Serialize, Deserialize, Debug, Clone, PartialEq)]
 pub struct PongData {
     pub orig: f64,

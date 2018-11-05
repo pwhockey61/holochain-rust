@@ -4,13 +4,11 @@ extern crate holochain_net_connection;
 extern crate serde_json;
 
 use holochain_net_connection::{
-    net_connection_thread::NetConnectionThread, protocol::Protocol, NetResult,
+    net_connection::NetConnection,
+    net_connection_thread::NetConnectionThread, protocol::Protocol, protocol_wrapper::{ProtocolWrapper, ConnectData, SendData,}, NetResult,
 };
 
-use holochain_net::{
-    ipc_net_worker::IpcNetWorker,
-    p2p_network::P2pNetwork,
-};
+use holochain_net::{ipc_net_worker::IpcNetWorker, p2p_network::P2pNetwork};
 
 use std::sync::mpsc;
 
@@ -54,16 +52,73 @@ fn exec() -> NetResult<()> {
         }).into(),
     )?;
 
+    let mut id = "".to_string();
+    let mut addr = "".to_string();
+
     loop {
         let z = receiver.recv()?;
 
-        println!("got: {:?}", z);
+        let wrap = ProtocolWrapper::from(&z);
+
+        match wrap {
+            ProtocolWrapper::State(s) => {
+                id = s.id;
+                if s.bindings.len() > 0 {
+                    addr = s.bindings[0].clone();
+                }
+            },
+            _ => (),
+        }
 
         if let Protocol::P2pReady = z {
             println!("p2p ready!!");
             break;
         }
     }
+
+    println!("id: {}, addr: {}", id, addr);
+
+    con.send(ProtocolWrapper::Connect(ConnectData {
+        address: addr.clone(),
+    }).into())?;
+
+    loop {
+        let z = receiver.recv()?;
+
+        match ProtocolWrapper::from(&z) {
+            ProtocolWrapper::PeerConnected(p) => {
+                println!("got peer connected: {}", p.id);
+                break;
+            },
+            _ => (),
+        }
+
+        println!("got: {:?}", z);
+    }
+
+    con.send(ProtocolWrapper::SendMessage(SendData {
+        msg_id: "unique-id".to_string(),
+        to_address: id.clone(),
+        data: json!("test data"),
+    }).into())?;
+
+    let mut handleData: ProtocolWrapper;
+
+    loop {
+        let z = receiver.recv()?;
+
+        match ProtocolWrapper::from(&z) {
+            ProtocolWrapper::HandleSend(m) => {
+                handleData = ProtocolWrapper::HandleSend(m);
+                break;
+            },
+            _ => (),
+        }
+
+        println!("got: {:?}", z);
+    }
+
+    println!("got handleSend: {:?}", handleData);
 
     con.destroy()?;
 

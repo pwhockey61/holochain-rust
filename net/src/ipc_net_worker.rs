@@ -7,6 +7,11 @@ use holochain_net_ipc::{
 use holochain_net_connection::{
     net_connection::{NetConnection, NetConnectionRelay, NetHandler, NetWorker},
     protocol::{JsonString, Protocol},
+    protocol_wrapper::{
+        ProtocolWrapper,
+        StateData,
+        ConfigData,
+    },
     NetResult,
 };
 
@@ -22,8 +27,6 @@ pub struct IpcNetWorker {
     is_ready: bool,
 
     state: String,
-    id: String,
-    bindings: Vec<String>,
 
     last_state_millis: f64,
 }
@@ -53,21 +56,24 @@ impl NetWorker for IpcNetWorker {
         if let Ok(data) = self.ipc_relay_receiver.try_recv() {
             did_something = true;
 
-            if data.is_json() {
-                let json: serde_json::Value = serde_json::from_str(&data.as_json_string())?;
+            let wrap = ProtocolWrapper::from(&data);
 
-                println!("@@@@ got {}", serde_json::to_string_pretty(&json)?);
-
-                if json.is_object() && json["method"].is_string() {
-                    if json["method"] == "state" {
-                        self.priv_handle_state(json)?;
-                    } else if json["method"] == "defaultConfig" {
-                        self.priv_handle_default_config(json)?;
-                    }
-                }
-            }
+            match wrap {
+                ProtocolWrapper::State(s) => {
+                    self.priv_handle_state(s)?;
+                },
+                ProtocolWrapper::DefaultConfig(c) => {
+                    self.priv_handle_default_config(c)?;
+                },
+                _ => (),
+            };
 
             (self.handler)(Ok(data))?;
+
+            if !self.is_ready && &self.state == "ready" {
+                self.is_ready = true;
+                (self.handler)(Ok(Protocol::P2pReady))?;
+            }
         }
 
         Ok(did_something)
@@ -105,8 +111,6 @@ impl IpcNetWorker {
             is_ready: false,
 
             state: "undefined".to_string(),
-            id: "undefined".to_string(),
-            bindings: Vec::new(),
 
             last_state_millis: 0.0_f64,
         })
@@ -118,70 +122,33 @@ impl IpcNetWorker {
         let now = get_millis();
 
         if now - self.last_state_millis > 500.0 {
-            self.ipc_relay.send(
-                json!({
-                "method": "requestState",
-            }).to_string()
-                    .into(),
-            )?;
+            self.ipc_relay.send(ProtocolWrapper::RequestState.into())?;
             self.last_state_millis = now;
         }
 
         Ok(())
     }
 
-    fn priv_handle_state(&mut self, json: serde_json::Value) -> NetResult<()> {
-        self.state = match json["state"].as_str() {
-            Some(s) => s.to_string(),
-            None => "undefined".to_string(),
-        };
-
-        self.id = match json["id"].as_str() {
-            Some(id) => id.to_string(),
-            None => "undefined".to_string(),
-        };
-
-        self.bindings = match json["bindings"].as_array() {
-            Some(arr) => arr
-                .iter()
-                .map(|i| match i.as_str() {
-                    Some(b) => b.to_string(),
-                    None => "undefined".to_string(),
-                })
-                .collect(),
-            None => Vec::new(),
-        };
+    fn priv_handle_state(&mut self, state: StateData) -> NetResult<()> {
+        self.state = state.state;
 
         if &self.state == "need_config" {
-            self.ipc_relay.send(
-                json!({
-                "method": "requestDefaultConfig",
-            }).to_string()
-                    .into(),
-            )?;
-        }
-
-        if !self.is_ready && &self.state == "ready" {
-            (self.handler)(Ok(Protocol::P2pReady))?;
+            self.ipc_relay.send(ProtocolWrapper::RequestDefaultConfig.into())?;
         }
 
         println!(
             "GOT STATE UPDATE: state: {}, id: {}, bindings: {:?}",
-            self.state, self.id, self.bindings
+            self.state, state.id, state.bindings
         );
 
         Ok(())
     }
 
-    fn priv_handle_default_config(&mut self, json: serde_json::Value) -> NetResult<()> {
+    fn priv_handle_default_config(&mut self, config: ConfigData) -> NetResult<()> {
         if &self.state == "need_config" {
-            self.ipc_relay.send(
-                json!({
-                "method": "setConfig",
-                "config": json["config"],
-            }).to_string()
-                    .into(),
-            )?;
+            self.ipc_relay.send(ProtocolWrapper::SetConfig(ConfigData {
+                config: config.config,
+            }).into())?;
         }
 
         Ok(())
