@@ -3,7 +3,7 @@
 Depending on whether your interest is specific, or general, you may wish to read it front to back, or skip to specific sections of the book. If the summary of a section describes you, then it's a section for you!
 
 ### Planning a dApp
-**Readers:** You can't put the horse before the cart. First things first:  understanding the landscape of decentralized apps. What are the mechanics of a functioning decentralized app? You have an idea of what you want to build, and you need to get a grasp on what it's going to take. You need to know what your blind spots are, and what are the common pitfalls. You need to know which of your assumptions to hold on to, and which to let go. 
+**Readers:** You can't put the cart before the horse. First things first:  understanding the landscape of decentralized apps. What are the mechanics of a functioning decentralized app? You have an idea of what you want to build, and you need to get a grasp on what it's going to take. You need to know what your blind spots are, and what are the common pitfalls. You need to know which of your assumptions to hold on to, and which to let go. 
 
 **Writing:** General Audience
 
